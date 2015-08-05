@@ -1,0 +1,660 @@
+package Utility
+{
+	import flash.display.DisplayObject;
+	import flash.display.GradientType;
+	import flash.display.Sprite;
+	import flash.geom.Matrix;
+	import flash.geom.Point;
+	
+	import mx.controls.Spacer;
+	import mx.core.UIComponent;
+	import mx.modules.Module;
+	
+	public class drawUtility extends UIComponent
+	{
+		//画图类型
+		private var _type:String="rect";
+		//填充色
+		private var _fillColor:uint=0xffffff;
+		//线颜色
+		private var _lineColor:uint=0x000000;
+		//相对坐标
+		private var _x:Number=0;
+		private var _y:Number=0;
+		//线起始坐标
+		private var _fromx:Number=0;
+		private var _fromy:Number=0;
+		//线终点坐标
+		private var _tox:Number=0;
+		private var _toy:Number=0;
+		//半径
+		private var _raduis:Number=0;
+		//透明度
+		private var _alpha:Number=1;
+		//线的粗细
+		private var _lineWeight:Number=1;
+		
+		//是否需要渐变		
+		private var _isGradient:Boolean=false;	
+		//渐变宽度
+		private var _gradientWidth:Number=0;
+		//渐变高度
+		private var _gradientHeight:Number=30;	
+		
+		//是否需要圆角		
+		private var _isRound:Boolean=false;
+		//圆角数组[左上，右上，左下，右下]
+		private var _roundSize:Array=[0,0,0,0];
+		
+		//三角形边长
+		private var _triangleWidth:Number=0;
+		//三角形方向
+		private var _direction:String="left";
+		
+		//渐变对象
+		private var martrix:Matrix =null;
+		//渐变颜色
+		private var _colorFrom:uint=0xffffff;
+		private var _colorTo:uint=0x000000;
+		
+		//是否画虚线
+		private var _isDashed:Boolean=false;
+		//虚线间隔
+		private var _step:Number=30;		
+		
+		
+		// 画图对象
+		private var _sprite:Sprite=null;
+		//配置参数
+		private var _property:Object;
+		
+		public function drawUtility()
+		{
+			super();	
+			
+		}
+		//获取配置参数
+		public function get setProperty():Object{
+			
+			return this._property;
+		}
+		/**
+		 *	 设置组件参数
+		 * @param objs 配置参数
+		 * 
+		 */		
+		public function set setProperty(objs:Object):void
+		{
+			_property=objs;
+			for(var obj:String in objs)
+			{
+				
+				switch(obj)
+				{
+					case "Property":
+						setShapeProperty(objs[obj]);
+						break;
+					case "Style":
+						setShapeStyle(objs[obj]);
+						break;				
+				}
+			}
+			drawShape();
+		}
+		public function clear():void{
+			
+			_sprite.graphics.clear();
+			
+		}
+		/**
+		 * 设置组件属性 
+		 * @param objs
+		 * 
+		 */		
+		private function setShapeProperty(objs:Object):void{
+			
+			for(var obj:String in objs)
+			{
+				switch(obj)
+				{
+					case "type"://类型
+						_type=objs[obj];
+						break;
+					case "position"://
+						_x=objs[obj][0];
+						_y=objs[obj][1];						
+						break;	
+					case "size":						
+						this.width=objs[obj][0];
+						this.height=objs[obj][1];
+						break;	
+					case "isRound":						
+						_isRound=objs[obj];
+						break;	
+					case "roundSize":						
+						_roundSize=objs[obj];
+						break;	
+					case "triangleWidth":						
+						_triangleWidth=objs[obj];
+						break;
+					case "raduis":						
+						_raduis=objs[obj];
+						break;	
+					case "direction":						
+						_direction=objs[obj];						
+						break;
+					case "alpha":						
+						_alpha=objs[obj];						
+						break;
+					case "lineFromTo":						
+						_fromx=objs[obj][0];
+						_fromy=objs[obj][1];
+						_tox=objs[obj][2];
+						_toy=objs[obj][3];						
+						break;	
+					case "lineWeight":						
+						_lineWeight=objs[obj];						
+						break;	
+					case "isGradient":						
+						_isGradient=objs[obj];						
+						break;	
+					case "colors":						
+						_colorFrom=objs[obj][0];
+						_colorTo=objs[obj][1];
+						break;	
+					case "gradientHeight":						
+						_gradientHeight=objs[obj];						
+						break;	
+					case "gradientWidth":						
+						_gradientWidth=objs[obj];						
+						break;	
+					
+					case "isDashed":						
+						_isDashed=objs[obj];						
+						break;	
+					case "step":						
+						_step=objs[obj];						
+						break;						
+					
+				}
+				
+			}
+			
+		}
+		/**
+		 *	设置组件样式 
+		 * @param objs
+		 * 
+		 */		
+		private function setShapeStyle(objs:Object):void{
+			
+			for(var obj:String in objs)
+			{
+				switch(obj)
+				{
+					case "fillColor":
+						_fillColor=objs[obj];
+						break;
+					case "lineColor":
+						_lineColor=objs[obj];
+						break;				
+				}
+				
+			}
+		}
+		
+		/**
+		 * 	画图方法
+		 * 
+		 */	
+		private function drawShape():void{
+			
+			if(_sprite==null)
+				_sprite=new Sprite();
+			
+			_sprite.graphics.lineStyle(_lineWeight,_lineColor,_alpha);
+			
+			if(_isGradient)
+			{
+				
+				martrix= new Matrix();
+				_gradientWidth==0?this.width:_gradientWidth;					
+				martrix.createGradientBox(_gradientWidth, _gradientHeight, Math.PI / 2, 0, 0);
+				_sprite.graphics.beginGradientFill(GradientType.LINEAR, [_colorFrom,_colorTo], [1, 1], [0,255],martrix);
+			}
+			else{
+				_sprite.graphics.beginFill(_fillColor,_alpha);
+			}
+			
+			
+			switch(_type)
+			{
+				case "circle"://圆形
+					_sprite=drawCircle(_sprite,_x,_y,_raduis);
+					break;
+				case "ellipse"://椭圆
+					_sprite=drawEllipse(_sprite,_x,_y,this.width,this.height);
+					break;
+				case "rect"://方形
+					_sprite=drawRect(_sprite,_x,_y,this.width,this.height,_isRound,_roundSize,_direction);
+					break;
+				case "triangle":// 三角形
+					_sprite=drawTriangle(_sprite,_triangleWidth,_direction);
+					break;
+				case "line":// 线
+					_sprite=drawLine(_sprite,_fromx,_fromy,_tox,_toy);
+					break;
+				case "cross": // X
+					_sprite=drawCross(_sprite,_fromx,_fromy,_tox,_toy);
+				case "rhombus"://菱形
+					_sprite=drawRhombus(_sprite,this.width,this.height);					
+					break;
+				case "cube":	//立方体
+					_sprite=drawCube(_sprite,this.width);					
+					break;				
+				
+			}
+			_sprite.graphics.endFill();
+			
+			this.addChild(_sprite);
+			
+		}
+		
+		public function A(x:Number,y:Number,width:Number,height:Number,fillColor:uint,lineColor:uint):void{
+			var m:Matrix=new Matrix();
+			m.createGradientBox(width, height, Math.PI / 2, 0, 0);		
+			
+			this.graphics.lineStyle(1,lineColor,1);
+			this.graphics.beginFill(fillColor,1);
+			this.graphics.moveTo(100,180);			
+			this.graphics.lineTo(140,60);
+			this.graphics.lineTo(160,60);			
+			this.graphics.lineTo(200,180);
+			this.graphics.lineTo(175,180);
+			this.graphics.lineTo(160,140);
+			this.graphics.lineTo(140,140);
+			this.graphics.lineTo(125,180);			
+			this.graphics.endFill();
+			
+			this.graphics.beginGradientFill(GradientType.LINEAR, [0xFFFFFF,0x000000], [1, 1], [0,255],m);
+			this.graphics.moveTo(150,105);		
+			this.graphics.lineTo(145,120);	
+			this.graphics.lineTo(155,120);	
+			this.graphics.lineTo(150,105);	
+			this.graphics.endFill();
+			
+			this.graphics.beginGradientFill(GradientType.LINEAR, [0xFFFFFF,0x000000], [1, 1], [0,255],m);
+			this.graphics.moveTo(125,180);	
+			this.graphics.lineTo(140,170);	
+			this.graphics.lineTo(150,140);
+			this.graphics.lineTo(140,140);
+			this.graphics.endFill();
+			
+			this.graphics.beginGradientFill(GradientType.LINEAR, [0xFFFFFF,0x000000], [1, 1], [0,255],m);
+			this.graphics.moveTo(160,60);
+			this.graphics.lineTo(140,60);	
+			this.graphics.lineTo(155,50);	
+			this.graphics.lineTo(175,50);
+			this.graphics.lineTo(215,170);
+			this.graphics.lineTo(200,180);
+			this.graphics.lineTo(160,60);
+			this.graphics.lineTo(175,50);
+			this.graphics.endFill();
+			
+		}
+		
+		/**
+		 * 画扇形 
+		 * 	2015 05 26 by czx
+		 */
+		
+		private function drawSector(sprite:Sprite,x:Number, y:Number, r:Number, R:Number, angle:Number, startA:Number):Sprite
+		{
+			sprite.graphics.clear();
+			sprite.graphics.lineStyle(1,0,1);
+			sprite.graphics.beginFill(0,0.5);				
+			if(Math.abs(angle)>405)
+			{
+				angle=405;
+			}
+			var n:Number=Math.ceil(Math.abs(angle)/45);
+			var angleA:Number=angle/n;
+			angleA=angleA*Math.PI/180;
+			startA=startA*Math.PI/180;
+			var startB:Number=startA;
+			sprite.graphics.moveTo(x+r*Math.cos(startA),y+r*Math.sin(startA));
+			sprite.graphics.lineTo(x+R*Math.cos(startA),y+R*Math.sin(startA));
+			for(var i:int=1;i<n;i++)
+			{
+				startA+=angleA;
+				var angleMid1:Number=startA-angleA/2; 					
+				var bx:Number=x+R/Math.cos(angleA/2)* Math.cos(angleMid1); 					
+				var by:Number=y+R/Math.cos(angleA/2)*Math.sin(angleMid1); 					
+				var cx:Number=x+R*Math.cos(startA); 					
+				var cy:Number=y+R*Math.sin(startA); 					
+				sprite.graphics.curveTo(bx, by, cx, cy);
+			}
+			//				内圆起点 				
+			sprite.graphics.lineTo(x+r*Math.cos(startA),y+r * Math.sin(startA)); 				
+			//				内圆弧 				
+			for (var j:int=n;j>1;j--) 					
+			{ 					
+				startA-=angleA;					
+				var angleMid2:Number=startA+angleA/2;					
+				var bx2:Number=x+r/Math.cos(angleA/2)*Math.cos(angleMid2);		
+				var by2:Number=y+r/Math.cos(angleA/2)*Math.sin(angleMid2); 	
+				var cx2:Number=x+r*Math.cos(startA); 					
+				var cy2:Number=y+r*Math.sin(startA); 					
+				sprite.graphics.curveTo(bx2, by2, cx2, cy2); 					
+			} 				
+			//内圆终点 				
+			sprite.graphics.lineTo(x+r*Math.cos(startB),y+r*Math.sin(startB)); 				
+			//完成 				
+			sprite.graphics.endFill(); 	
+			return sprite;
+		} 		
+		
+		
+		public function B():void{
+			
+		
+		}
+		/**
+		 *	 
+		 * @param fillColor	填充色	
+		 * @param lineColor	线颜色
+		 * @param x		水滴中心x
+		 * @param y		水滴中心y
+		 * @param r		水滴半径
+		 * 
+		 */		
+		public function drawDrop(fillColor:uint,lineColor:uint,x:Number,y:Number,r:Number):void
+		{
+			//画圆
+			this.graphics.lineStyle(2,lineColor,1);
+			this.graphics.beginFill(fillColor,1);
+			this.graphics.drawCircle(x,y,r);			
+			this.graphics.endFill();
+			//左，右曲线
+			this.graphics.lineStyle(2,lineColor,1);			
+			this.graphics.beginFill(fillColor,1);
+			this.graphics.moveTo(x-r,y);
+			this.graphics.curveTo(x-r+2,y+r,x,y+2*r);
+			this.graphics.curveTo(x+r-2,y+r,x+r,y);
+			this.graphics.endFill();
+			//中间补线
+			this.graphics.lineStyle(2,fillColor,1);
+			this.graphics.moveTo(x-r+2,y);
+			this.graphics.lineTo(x+r-2,y);
+			this.graphics.endFill();
+			// 小方格	
+			this.graphics.lineStyle(1,lineColor,1);
+			this.graphics.beginFill(lineColor,1);
+			this.graphics.drawRect(x-3/20*r,y-r/2,3/10*r,3/10*r);
+			//长方格
+			this.graphics.beginFill(lineColor,1);
+			this.graphics.drawRect(x-3/20*r,y,3/10*r,4/5*r);
+			
+			this.graphics.endFill();
+			
+		}
+		
+		/**
+		 *	画立方体
+		 *
+		 * @return 
+		 * 
+		 */		
+		private function drawCube(sprite:Sprite,width:Number):Sprite
+		{
+			sprite.graphics.drawRect(_x,_y,width,width);
+			sprite.graphics.moveTo(_x,_y);
+			sprite.graphics.lineTo(_x+width/3*2,_y-width/3);
+			sprite.graphics.lineTo(_x+width/3*2+width,_y-width/3);
+			sprite.graphics.lineTo(_x+width,_y);
+			
+			
+			sprite.graphics.moveTo(_x+width/3*2+width,_y-width/3);
+			sprite.graphics.lineTo(_x+width/3*2+width,_y+width/3*2);
+			sprite.graphics.lineTo(_x+width,_y+width);
+			sprite.graphics.lineTo(_x+width,_y);
+			return sprite;
+			
+		}
+		/**
+		 *	画线 
+		 * @param sprite  容器对象
+		 * @param fromx	起始x
+		 * @param fromy 起始y
+		 * @param tox	终点x
+		 * @param toy	终点y
+		 * @return 
+		 * 
+		 */		
+		private function drawLine(sprite:Sprite,fromx:Number,fromy:Number,tox:Number,toy:Number):Sprite
+		{
+			
+			var interval:Number=0;
+			if(_isDashed)
+			{
+				if(fromx==tox&&fromy!=toy)		
+				{	//竖虚线
+					var length:Number=toy-fromy;
+					
+					interval=length/_step;
+					sprite=drawVDashed(sprite,fromx,fromy,toy,interval);
+				}
+				else if(fromy==toy&&fromx!=tox)
+				{//横虚线
+					var hlength:Number=tox-fromx;					
+					interval=hlength/_step;
+					
+					sprite=drawHDashed(sprite,fromy,fromx,tox,interval);
+				}
+				else{
+					//斜虚线
+				}
+			}
+			else{
+				sprite.graphics.moveTo(fromx,fromy);
+				sprite.graphics.lineTo(tox,toy);
+			}
+			return sprite;
+			
+		}
+		//垂直虚线
+		private function drawVDashed(sprite:Sprite,fromx:Number,fromy:Number,to:Number,interval:Number):Sprite{
+			if(interval>0)
+			{
+				for(var begin:Number=fromy;begin<=to;)
+				{
+					begin+=interval;
+					sprite.graphics.moveTo(fromx,begin);
+					begin+=interval;
+					sprite.graphics.lineTo(fromx,begin);
+				}
+			}
+			else{
+				for(var begin1:Number=fromy;begin1>=to;)
+				{
+					begin1+=interval;
+					sprite.graphics.moveTo(fromx,begin1);
+					begin1+=interval;
+					sprite.graphics.lineTo(fromx,begin1);
+				}
+			}
+			return sprite;
+		}
+		
+		//水平虚线
+		private function drawHDashed(sprite:Sprite,fromy:Number,fromx:Number,to:Number,interval:Number):Sprite{
+			if(interval>0)
+			{
+				for(var begin:Number=fromx;begin<=to;)
+				{
+					begin+=interval;
+					sprite.graphics.moveTo(begin,fromy);
+					begin+=interval;
+					sprite.graphics.lineTo(begin,fromy);
+				}
+			}
+			else{
+				for(var begin1:Number=fromx;begin1>=to;)
+				{					
+					
+					begin1+=interval;
+					sprite.graphics.moveTo(begin1,fromy);
+					begin1+=interval;
+					sprite.graphics.lineTo(begin1,fromy);
+				}
+			}
+			return sprite;
+		}
+		
+		
+		
+		
+		/**
+		 *	画叉 
+		 * @param sprite  容器对象
+		 * @param fromx	起始x
+		 * @param fromy 起始y
+		 * @param tox	终点x
+		 * @param toy	终点y
+		 * @return 
+		 * 
+		 */		
+		private function drawCross(sprite:Sprite,fromx:Number,fromy:Number,tox:Number,toy:Number):Sprite
+		{
+			
+			sprite.graphics.moveTo(fromx,fromy);
+			sprite.graphics.lineTo(tox,toy);
+			sprite.graphics.moveTo(fromx,toy);
+			sprite.graphics.lineTo(tox,fromy);
+			return sprite;
+			
+		}
+		/**
+		 *	画菱形 
+		 * 
+		 * @return 
+		 * 
+		 */		
+		private function drawRhombus(sprite:Sprite,width:Number,height:Number):Sprite
+		{
+			
+			sprite.graphics.moveTo(_x,_y+height/2);
+			sprite.graphics.lineTo(_x+width/2,_y);
+			sprite.graphics.lineTo(_x+width,_y+height/2);
+			sprite.graphics.lineTo(_x+width/2,_y+height);
+			sprite.graphics.lineTo(_x,_y+height/2);
+			return sprite;
+			
+		}
+		
+		
+		/**
+		 * 画长方形 
+		 * @param sprite 容器对象
+		 * @param x x坐标
+		 * @param y y坐标
+		 * @param width 长方形宽度
+		 * @param height 长方形高度
+		 * @param isRound 是否圆角
+		 * @param roundSize 圆角数组
+		 * @return 
+		 * 
+		 */		
+		private function drawRect(sprite:Sprite,x:Number,y:Number,width:Number,height:Number,isRound:Boolean,roundSize:Array,direction:String):Sprite
+		{
+			
+			if(isRound)
+			{				
+				sprite.graphics.drawRoundRectComplex(x,y,width,height,roundSize[0],roundSize[1],roundSize[2],roundSize[3]);
+				
+			}
+			else{
+				
+				sprite.graphics.drawRect(x,y,width,height);				
+				
+			}
+			return sprite;
+		}
+		
+		/**
+		 * 画圆形
+		 * @param sprite 容器对象
+		 * @param x x坐标
+		 * @param y y坐标
+		 * @param raduis 圆半径
+		 * @return 
+		 * 
+		 */		
+		private function drawCircle(sprite:Sprite,x:Number,y:Number,raduis:Number):Sprite
+		{
+			sprite.graphics.drawCircle(x,y,raduis);			
+			return sprite;
+		}
+		
+		/**
+		 * 画椭圆形
+		 * @param sprite 容器对象
+		 * @param x x坐标
+		 * @param y y坐标
+		 * @param width 椭圆宽度
+		 * @param height 椭圆高度
+		 * @return 
+		 * 
+		 */
+		private function drawEllipse(sprite:Sprite,x:Number,y:Number,width:Number,height:Number):Sprite
+		{			
+			sprite.graphics.drawEllipse(x,y,width,height);
+			return sprite;
+		}
+		/**
+		 * 画三角形
+		 * @param sprite 容器对象
+		 * @param triangleWidth 三角形边长
+		 * @param direction 三角形方向
+		 * @return 
+		 * 
+		 */		
+		public function drawTriangle(sprite:Sprite,triangleWidth:Number,direction:String):Sprite
+		{
+			sprite.x=_x;
+			sprite.y=_y;
+			switch(direction)
+			{
+				case "left":					
+					sprite.graphics.moveTo(triangleWidth, 0);
+					sprite.graphics.lineTo(triangleWidth, triangleWidth);
+					sprite.graphics.lineTo(0, triangleWidth / 2);
+					sprite.graphics.lineTo(triangleWidth, 0);
+					break;
+				case "right":
+					sprite.graphics.moveTo(0, 0);
+					sprite.graphics.lineTo(triangleWidth, triangleWidth / 2);
+					sprite.graphics.lineTo(0, triangleWidth);
+					sprite.graphics.lineTo(0, 0);
+					break;
+				case "up":
+					sprite.graphics.moveTo(triangleWidth / 2, 0);
+					sprite.graphics.lineTo(triangleWidth, triangleWidth);
+					sprite.graphics.lineTo(0, triangleWidth);
+					sprite.graphics.lineTo(triangleWidth / 2, 0);
+					break;
+				case "down":
+					sprite.graphics.moveTo(0, 0);
+					sprite.graphics.lineTo(triangleWidth / 2, triangleWidth);
+					sprite.graphics.lineTo(triangleWidth,0);
+					sprite.graphics.lineTo(0, 0);
+					break;		
+			}
+			return sprite;
+		}
+		
+		
+		
+		
+	}
+}
