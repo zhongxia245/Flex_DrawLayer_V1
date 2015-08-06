@@ -52,13 +52,14 @@ package strongsoft.eventPanel
 	public class EventPanel_DrawLayer_V1 extends Module
 	{
 		//版本号
-		public static const VERSION:String = "V1.0";
-		public static const VERSIONTIME:String = "2015-08-05 09:00";
+		public  const VERSION:String = "V1.0";
+		public  const VERSIONTIME:String = "2015-08-05 09:00";
 		
 		//固定参数
-		public static const FIXED:String="fixed"
-		private static const PARAMS:String = "params";
-		private static const POLYGONLAYERLEGENGD:String = "PolygonLayerLegengd";  //面图层上文字图例的图层名【面图层=面+文字图层】
+		private const FIXED:String="fixed"
+		private const PARAMS:String = "params";
+		private const POLYGONLAYERLEGENGD:String = "PolygonLayerLegengd";  //面图层上文字图例的图层名【面图层=面+文字图层】
+		private const LAYERSORT:Array = ["polygon","line","point"];  //图层管理,图层按照这个顺序进行排序
 		
 		/*默认的图层基本配置*/
 		private  var _defaultFixedConfig:Object = {
@@ -72,16 +73,24 @@ package strongsoft.eventPanel
 			"openPanelId": "",
 			"moduleKey": "",
 			"isDrawPoint": false,
-			"isFilterPoint":true
+			"isFilter":true
 		};
 		/*每个点线面图层的数据配置*/
 		private  var _defaultParamConfig:Object = {
 			"url": "",
-			"type": "point",
+			"type": "point",  //point /line / polygon
 			"lon": "LGTD",
 			"lat": "LTTD",
 			"idno": "STCD",
 			"name":"STNM"
+		};
+		
+		//绘制点图层的数据格式要求字段
+		private var _defaultDrawPointField:Object = {
+			"idno":"STCD",
+			"name":"STNM",
+			"lon":"LGTD",
+			"lat":"LTTD"
 		};
 		
 		/*使用该SWF,在地图上所有图层数组*/
@@ -98,25 +107,25 @@ package strongsoft.eventPanel
 		 * @param fixedParam
 		 * @param caller
 		 *  配置参数EXAMPLE
-			fixedParam = {
-			"fixed":{"layerName":"layer",   	//图层名称
-			"dataKey":"listData",  				//列表数据的DataKey
-			"lon":"LGTD",   					//列表经纬度的字段
-			"lat":"LTTD",    
-			"idno":"STCD",   					//列表数据的唯一标识
-			"name":"STNM",                      //列表数据的名称
-			"panelId":"paenlId",      			//列表面板ID   (监听模块加载,隐藏等事件)
-			"openPanelId":"pnl_popDb",  //站点点击弹窗的面板ID (监听弹窗事件,第一次加载,第二次加载)
-			"moduleKey":"popDb",  //站点点击弹窗的模块Key
-			"isDrawPoint":true,    //是否用DataKey的值来绘制图层(点线面)
-			"isFilterPoint":true   //是否关联DataKey过滤站点
-			},
-			"params":[
-			{"url":"getDBLayerData","type":"point","lon":"LGTD","lat":"LTTD","idno":"STCD"},
-			{"url":"getXZHQLayerData","type":"line","lon":"LGTD","lat":"LTTD","idno":"STCD"},
-			{"url":"getQLLayerData","type":"polygon","lon":"LGTD","lat":"LTTD","idno":"STCD"}
-			]
-			};
+		 fixedParam = {
+		 "fixed":{"layerName":"layer",   	//图层名称
+		 "dataKey":"listData",  				//列表数据的DataKey
+		 "lon":"LGTD",   					//列表经纬度的字段
+		 "lat":"LTTD",    
+		 "idno":"STCD",   					//列表数据的唯一标识
+		 "name":"STNM",                      //列表数据的名称
+		 "panelId":"paenlId",      			//列表面板ID   (监听模块加载,隐藏等事件)
+		 "openPanelId":"pnl_popDb",  //站点点击弹窗的面板ID (监听弹窗事件,第一次加载,第二次加载)
+		 "moduleKey":"popDb",  //站点点击弹窗的模块Key
+		 "isDrawPoint":true,    //是否用DataKey的值来绘制图层(点线面)
+		 "isFilter":true   //是否过滤站点数据
+		 },
+		 "params":[
+		 {"url":"getDBLayerData","type":"point","lon":"LGTD","lat":"LTTD","idno":"STCD"},
+		 {"url":"getXZHQLayerData","type":"line","lon":"LGTD","lat":"LTTD","idno":"STCD"},
+		 {"url":"getQLLayerData","type":"polygon","lon":"LGTD","lat":"LTTD","idno":"STCD"}
+		 ]
+		 };
 		 */		
 		public function init(event:FlexEvent,elementInfo:Object,fixedParam:Object,caller:Function=null):void{ 
 			
@@ -216,7 +225,7 @@ package strongsoft.eventPanel
 			
 			//4.1.1 是否用DataKey的数据绘制点图层
 			if(fixedParam[FIXED]["isDrawPoint"]){
-				dataKeyData = replaceDataKeyLonLat(dataKeyData,fixedParam[FIXED]);
+				dataKeyData = data2PointData(dataKeyData,fixedParam[FIXED]);
 				drawPointLayer(dataKeyData,fixedParam[FIXED].layerName,fixedParam[FIXED].moduleKey,fixedParam[FIXED].layerName);
 			}
 			
@@ -228,14 +237,15 @@ package strongsoft.eventPanel
 					var result:String = ev.target.data as String;
 					var urlData:Array = JSON.deserialize(result) as Array;
 					
-					urlData = dataHandler(urlData, dataKeyData,params[arg[0]].type, fixedParam,params[arg[0]]["idno"],params[arg[0]]["lon"],params[arg[0]]["lat"]);
+					//数据过滤,处理
+					urlData = dataHandler(urlData, dataKeyData,params[arg[0]].type, fixedParam,params[arg[0]]);
 					
 					//4.1.2.1 根据Type类型，绘制图层
 					drawLayerByType(params[arg[0]].type,urlData,fixedParam[FIXED].layerName+arg[0], fixedParam[FIXED].moduleKey,fixedParam[FIXED].layerName);
 					
 					/*
-						2015-08-04 16:25 by hxd
-						图层管理  (作用: 面<线<点    面图层最下面,线图层次之,点在最上面)
+					2015-08-04 16:25 by hxd
+					图层管理  (作用: 面<线<点    面图层最下面,线图层次之,点在最上面)
 					*/
 					_layerNames.push({"type":params[arg[0]].type,"layerName":fixedParam[FIXED].layerName+arg[0]});
 					alreadyRequestCount++;
@@ -284,7 +294,7 @@ package strongsoft.eventPanel
 		}
 		
 		/**
-		 * 线图层点击事件 [弹窗，保存站点编号，站点名称,保存在【图层名+ClickData】的存储器Key中]
+		 * 点图层点击事件 [弹窗，保存站点编号，站点名称,保存在【图层名】的存储器Key中]
 		 * @param layerName 
 		 * @param moduleKey
 		 * @param e
@@ -378,60 +388,98 @@ package strongsoft.eventPanel
 		 * @param dataKeyData  存在DataKey里面的数据
 		 * @return 匹配出列表有的站点数据
 		 */		
-		private function dataHandler(urlData:Array,dataKeyData:Array,type:String,fixedParam:Object,idno:String,lon:String,lat:String):Array{
+		private function dataHandler(urlData:Array,dataKeyData:Array,type:String,fixedParam:Object,param:Object):Array{
 			
-			//获取两个数组 关联的字段
-			var dataKeyidno:String = fixedParam.hasOwnProperty("idno")?fixedParam["idno"]+"":"STCD";  //右侧列表与URL读取数据的关联字段
+			//绘制站点需要的字段
+			var default_idno:String = _defaultDrawPointField["idno"]; 
+			var default_name:String = _defaultDrawPointField["name"]; 
+			var default_lon:String = _defaultDrawPointField["lon"]; 
+			var default_lat:String = _defaultDrawPointField["lat"]; 
 			
-			//获取两个数组中，经纬度所存的字段
-			var dataKeyLon:String = fixedParam[FIXED].hasOwnProperty("lon")?fixedParam[FIXED]["lon"]+"":"LGTD";  //Datakey中所需的Datakey字段
-			var dataKeyLat:String = fixedParam[FIXED].hasOwnProperty("lat")?fixedParam[FIXED]["lat"]+"":"LTTD"; 
+			//DataKey中,数据的唯一标识 ( 与URL数据关联 ),经纬度字段(赋值给DataKey,定位使用)
+			var dataKey_idno:String = fixedParam[FIXED]["idno"];  
+			var dataKey_lon:String = fixedParam[FIXED]["lon"];   
+			var dataKey_lat:String = fixedParam[FIXED]["lat"]; 
+			
+			//请求回URL数据的经纬度,唯一标识,名称字段
+			var url_idno:String = param["idno"];
+			var url_name:String = param["name"]; 
+			var url_lon:String =param["lon"];
+			var url_lat:String = param["lat"]; 
 			
 			var dataNew:Array = new Array(); 
 			if(type == "point"){
-				for(var index:Object in urlData){
-					for(var j:Object in dataKeyData){
-						if(StringUtil.trim(urlData[index][idno]+"")==StringUtil.trim(dataKeyData[j][dataKeyidno]+""))
-						{
-							var item:Object = urlData[index];
-							//为DataKey的数组添加经纬度信息
-							item[dataKeyLon] =urlData[index][lon];
-							item[dataKeyLat] = urlData[index][lat];
-							dataNew.push(item);
+				if(fixedParam[FIXED]["isFilter"]){
+					for(var index:Object in urlData){
+						for(var j:Object in dataKeyData){
+							if(StringUtil.trim(urlData[index][url_idno]+"")==StringUtil.trim(dataKeyData[j][dataKey_idno]+""))
+							{
+								var item:Object = urlData[index];
+								dataNew.push(item);
+								
+								//为DataKey赋值经纬度,定位需要用
+								dataKeyData[j][dataKey_lon] =urlData[index][url_lon];
+								dataKeyData[j][dataKey_lat] = urlData[index][url_lat];
+							}
 						}
 					}
+					return data2PointData(dataNew,param);;
+				}else {
+					//经纬度处理
+					return data2PointData(urlData,param);
 				}
-				return dataNew;
 			}	
 			else if (type == "polygon" ||type == "line"){  //过滤面图层数据,线图层数据
-				//TODO:目前不做处理(等绘制图层统一之后,在考虑是否要处理)   20150804 by  hxd
-				return urlData;
+				if(fixedParam[FIXED]["isFilter"]){
+					//TODO:目前不做处理(等绘制图层统一之后,在考虑是否要处理)   20150804 by  hxd
+					for(var n:Object in urlData){
+						for(var m:Object in dataKeyData){
+							if(StringUtil.trim(urlData[n][url_idno]+"".toLocaleLowerCase())==StringUtil.trim(dataKeyData[m][dataKey_idno]+"".toLocaleLowerCase()))
+							{
+								var item1:Object = urlData[n];
+								dataNew.push(item1); 
+							}
+						}
+					}
+					return dataNew;
+				}
 			}
 			return urlData;
 		}
 		
 		/**
-		 * 设置DataKey的经纬度字段,唯一标识字段 (eg:DataKey中,经纬度为lon,lat   可是绘制要求为LGTD,LGGD,所以需要做一个转换) 
-		 * @param dataKeyData
-		 * @param fixConfig
-		 * @return 
+		 * 把数据处理成绘制点图层需要的字段格式 
+		 * @param Data 点图层数据
+		 * @param fixConfig 点图层数据,经纬度,唯一标识,名称字段名
+		 * @return  绘制点图层需要的数据
 		 */		
-		private function replaceDataKeyLonLat(dataKeyData:Array,fixConfig:Object):Array{
+		private function data2PointData(data:Array,fixConfig:Object):Array{
 			var dataKeyData_New:Array = new Array();
-			if(dataKeyData[0].hasOwnProperty("STCD")&&dataKeyData[0].hasOwnProperty("STNM")&&dataKeyData[0].hasOwnProperty("LGTD")&&dataKeyData[0].hasOwnProperty("LTTD")){
-				return dataKeyData;
+			
+			var default_idno:String = _defaultDrawPointField["idno"]; 
+			var default_name:String = _defaultDrawPointField["name"]; 
+			var default_lon:String = _defaultDrawPointField["lon"]; 
+			var default_lat:String = _defaultDrawPointField["lat"]; 
+			
+			//是否包含绘制站点需要的 必须字段(唯一标识,名称,经纬度)
+			if(data[0].hasOwnProperty(default_idno)&&data[0].hasOwnProperty(default_name)&&data[0].hasOwnProperty(default_lon)&&data[0].hasOwnProperty(default_lat)){
+				return data;
 			}else {
-				for(var i:Number=0;i<dataKeyData.length;i++){
+				for(var i:Number=0;i<data.length;i++){
 					var item:Object = new Object();
-					item = dataKeyData[i];
-					var lon:String = fixConfig["lon"]!=null?fixConfig["lon"]:"LGTD";
-					var lat:String = fixConfig["lat"]!=null?fixConfig["lat"]:"LTTD";
-					var idno:String = fixConfig["idno"]!=null?fixConfig["idno"]:"STCD";
-					var stnm:String = fixConfig["name"]!=null?fixConfig["name"]:"STNM";
-					item["LGTD"] = dataKeyData[i][lon];
-					item["LTTD"] = dataKeyData[i][lat];
-					item["STCD"] = dataKeyData[i][idno];
-					item["STNM"] = dataKeyData[i][stnm];
+					item = data[i];
+					
+					var lon:String = fixConfig["idno"];
+					var lat:String = fixConfig["name"];
+					var idno:String = fixConfig["lon"];
+					var stnm:String = fixConfig["lat"];
+					
+					item[default_idno] = data[i][lon];
+					item[default_name] = data[i][lat];
+					item[default_lon] = data[i][idno];
+					item[default_lat] = data[i][stnm];
+					
+					//TODO:  可以清除本来经纬度字段的数据,保留绘制点图层需要的数据字段即可  eg: lon  LGTD  保留一个字段即可					
 					dataKeyData_New.push(item);
 				}
 				return dataKeyData_New;
@@ -444,8 +492,7 @@ package strongsoft.eventPanel
 		 * */
 		private function paramsSort(params:Object):Array{
 			var param_new:ArrayCollection = new ArrayCollection();
-			//var sortValue:Array =  ["point","line","polygon"]; 
-			var sortValue:Array =  ["polygon","line","point"]; 
+			var sortValue:Array =  LAYERSORT;  
 			for(var index:* in sortValue){
 				for(var i:* in params){
 					if(params[i]["type"]==sortValue[index]){
@@ -457,6 +504,8 @@ package strongsoft.eventPanel
 			return param_new.toArray();
 		}
 		/*=================================数据处理  END===========================================*/
+		
+		
 		
 		/*=================================图层管理事件  START===========================================*/
 		/**
@@ -498,6 +547,8 @@ package strongsoft.eventPanel
 		
 		/*=================================数据处理  END===========================================*/
 		
+		
+		
 		/*==========================通用方法 START  2015-08-04 16:00================================*/
 		/**
 		 * 合并参数 
@@ -509,17 +560,10 @@ package strongsoft.eventPanel
 		 */		
 		private function extend(defaultParam:Object,param:Object):Object{
 			var param_new:Object = new Object();
-			
 			for(var key:* in defaultParam)
-			{
 				param_new[key] = defaultParam[key];
-			}
-			
 			for(var key1:* in param)
-			{
 				param_new[key1] = param[key1];
-			}
-			
 			return param_new;
 		}
 		
