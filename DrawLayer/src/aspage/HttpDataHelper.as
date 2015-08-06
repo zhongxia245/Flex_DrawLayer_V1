@@ -1,0 +1,42 @@
+/*
+* 创建：trg
+* 日期：20100927
+* 功能：异步加载数据，提供队列管理功能，简化 HttpService 复杂的调用方式。
+*/
+package aspage 
+{
+	import tileMapWidgets.data.HttpDataLoader;
+
+	public class HttpDataHelper
+	{
+		static private var dataLoaderQueue:Array = [];
+		public static function load(url:String, method:String = "POST", data:Object = null, callback:Function = null, faultCallback:Function = null):tileMapWidgets.data.HttpDataLoader
+		{
+			var loader:HttpDataLoader = null;
+			for(var k:int = 0;k<dataLoaderQueue.length;k++)
+			{
+				if(!(dataLoaderQueue[k] as HttpDataLoader).running)
+				{
+					loader = dataLoaderQueue[k] as HttpDataLoader;
+					break;
+				}
+			}
+			if(loader == null)
+			{
+				loader = new HttpDataLoader();
+				dataLoaderQueue.push(loader);
+			}
+			loader.load(url,method,data,callback,faultCallback);
+			return loader;
+		}
+		
+		public static function clear():void
+		{
+			while(dataLoaderQueue.length > 0)
+			{
+				var loader:HttpDataLoader = dataLoaderQueue.shift() as HttpDataLoader;
+				loader.dispose();
+			}
+		}
+	}
+}

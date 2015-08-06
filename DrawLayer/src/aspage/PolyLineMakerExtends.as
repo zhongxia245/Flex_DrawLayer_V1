@@ -1,0 +1,29 @@
+package aspage 
+{
+	import tileMap.overlays.PolylineMarker;
+	import tileMap.TweenMap;
+	/**
+	 * 对PolylineMarker的扩展，tip提示显示的名字
+	 */ 
+	public class PolyLineMakerExtends extends PolylineMarker
+	{
+		private var _featureName:String;
+		public function PolyLineMakerExtends(map:TweenMap, locations:Array, dashLineStyle:Array=null)
+		{
+			super(map,locations,dashLineStyle);
+		}
+
+		/**tip提示显示的名字
+		 */ 
+		public function get featureName():String
+		{
+			return _featureName;
+		}
+
+		public function set featureName(value:String):void
+		{
+			_featureName = value;
+		}
+
+	}
+}
